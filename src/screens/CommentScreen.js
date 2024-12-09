@@ -110,12 +110,12 @@ const CommentScreen = ({ route, navigation }) => {
           Anonymous • {moment(post_created_at).format('MMMM Do YYYY, h:mm:ss a')}
         </Text>
       </View>
-
+  
       {/* Display the original post content */}
       <View style={styles.originalPostContainer}>
         <Text style={styles.originalPostText}>{post_content}</Text>
       </View>
-
+  
       {/* Input for the user to write their comment */}
       <TextInput
         style={styles.commentInput}
@@ -124,7 +124,7 @@ const CommentScreen = ({ route, navigation }) => {
         onChangeText={setCommentText}
         placeholderTextColor="#888"
       />
-      
+  
       {/* Button to post the comment */}
       <TouchableOpacity style={styles.commentButton} onPress={handleCommentSubmission}>
         {posting ? (
@@ -133,7 +133,7 @@ const CommentScreen = ({ route, navigation }) => {
           <Text style={styles.buttonText}>Post Comment</Text>
         )}
       </TouchableOpacity>
-
+  
       {/* Display the list of comments */}
       {loading ? (
         <ActivityIndicator size="large" color="#fff" />
@@ -143,11 +143,15 @@ const CommentScreen = ({ route, navigation }) => {
           renderItem={({ item }) => (
             <View style={styles.commentContainer}>
               <Text style={styles.commentText}>{item.comment_content}</Text>
-              <Text style={styles.commentDate}>{moment(item.created_at).format('MMMM Do YYYY, h:mm:ss a')}</Text>
+              <Text style={styles.commentDate}>
+                {moment(item.created_at).format('MMMM Do YYYY, h:mm:ss a')}
+              </Text>
             </View>
           )}
-          keyExtractor={(item) => item.comment_id.toString()}
-          style={styles.commentsList}
+          keyExtractor={(item) => {
+            if (item.comment_id) return item.comment_id.toString();
+            return Math.random().toString(); // Fallback for unique key generation
+          }}
         />
       )}
     </View>

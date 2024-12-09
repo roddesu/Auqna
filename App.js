@@ -7,6 +7,7 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import Homepage from './src/screens/Homepage';
 import CommentScreen from './src/screens/CommentScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen'; // Ensure this import
 
 const Stack = createStackNavigator();
 
@@ -39,6 +40,7 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="Homepage" component={Homepage} />
         <Stack.Screen name="Comment" component={CommentScreen} />
       </Stack.Navigator>

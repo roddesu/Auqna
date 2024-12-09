@@ -10,7 +10,7 @@ const port = 3001;
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://192.168.1.3:3001'], // Adjust frontend URL if needed
+  origin: ['http://192.168.1.140:3001'], // Adjust frontend URL if needed
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
 }));
@@ -125,6 +125,82 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.post('/forgot-password', (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  const otpExpiration = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiration
+
+  const checkUserQuery = 'SELECT * FROM users WHERE email = ?';
+  db.query(checkUserQuery, [email], (err, results) => {
+    if (err) {
+      console.error('Database Error:', err);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ success: false, message: 'Email not found' });
+    }
+
+    const insertOtpQuery = `
+      INSERT INTO forgot_password_requests (email, otp, otp_expiration)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE otp = VALUES(otp), otp_expiration = VALUES(otp_expiration)
+    `;
+
+    db.query(insertOtpQuery, [email, otp, otpExpiration], (err) => {
+      if (err) {
+        console.error('Database Error:', err);
+        return res.status(500).json({ success: false, message: 'Failed to generate OTP' });
+      }
+
+      const mailOptions = {
+        from: 'ubsafespace@gmail.com',
+        to: email,
+        subject: 'Your OTP for Password Reset',
+        text: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`,
+      };
+
+      transporter.sendMail(mailOptions, (error) => {
+        if (error) {
+          console.error('Email Error:', error);
+          return res.status(500).json({ success: false, message: 'Failed to send OTP email' });
+        }
+
+        res.status(200).json({ success: true, message: 'OTP sent successfully' });
+      });
+    });
+  });
+});
+
+app.post('/verify-forgot-password-otp', (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+  }
+
+  const query = `SELECT * FROM forgot_password_requests WHERE email = ? AND otp = ? AND otp_expiration > NOW()`;
+
+  db.query(query, [email, otp], (err, results) => {
+    if (err) {
+      console.error('Database Error:', err);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    res.status(200).json({ success: true, message: 'OTP verified successfully' });
+  });
+});
+
+
 // OTP verification endpoint
 app.post('/verify-otp', (req, res) => {
   const { email, otp } = req.body;
@@ -164,6 +240,35 @@ app.post('/verify-otp', (req, res) => {
     });
   });
 });
+
+app.post('/reset-password', (req, res) => {
+  const { email, newPassword } = req.body;
+
+  if (!email || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Email and new password are required' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+  }
+
+  const hashedPassword = bcrypt.hashSync(newPassword, 10);
+
+  const updateQuery = `
+    UPDATE users SET password = ? WHERE email = ?;
+    DELETE FROM forgot_password_requests WHERE email = ?;
+  `;
+
+  db.query(updateQuery, [hashedPassword, email, email], (err) => {
+    if (err) {
+      console.error('Database Error:', err);
+      return res.status(500).json({ success: false, message: 'Failed to reset password' });
+    }
+
+    res.status(200).json({ success: true, message: 'Password reset successfully' });
+  });
+});
+
 
 // Create Post endpoint (No JWT)
 app.post('/create-post', async (req, res) => {
@@ -260,5 +365,5 @@ app.get('/get-comments/:postId', async (req, res) => {
 
 // Start the Express server
 app.listen(port, () => {
-  console.log(`Server running on http://192.168.1.3:${port}`);
+  console.log(`Server running on http://192.168.1.140:${port}`);
 });

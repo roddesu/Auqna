@@ -14,7 +14,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
     }
 
     try {
-      const response = await axios.post(`http://192.168.1.3:3000/reset/${token}`, { newPassword });
+      const response = await axios.post(`http://192.168.1.3:3001/reset/${token}`, { newPassword });
       if (response.data.success) {
         Alert.alert('Success', response.data.message);
         navigation.navigate('Login');

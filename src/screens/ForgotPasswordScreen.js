@@ -17,7 +17,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       return;
     }
 
-    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zAZ]{2,6}$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Error', 'Please enter a valid email address.');
       return;
@@ -49,9 +49,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
     }
 
     setLoading(true);
+    console.log('Verifying OTP:', otp); // Log the OTP entered by the user
 
     try {
       const response = await axios.post(`${BASE_URL}/verify-otp`, { email, otp });
+      console.log('OTP verification response:', response.data); // Log the response from the backend
 
       if (response.data.success) {
         Alert.alert('Success', 'OTP verified. You can now reset your password.');
@@ -97,6 +99,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
             value={otp}
             onChangeText={setOtp}
             keyboardType="numeric"
+            maxLength={6} // Ensure only 6 digits can be entered
           />
           <TouchableOpacity style={styles.button} onPress={handleVerifyOtp} disabled={loading}>
             <Text style={styles.buttonText}>VERIFY OTP</Text>

@@ -194,11 +194,15 @@ app.post('/verify-forgot-password-otp', (req, res) => {
       return res.status(500).json({ success: false, message: 'Database error' });
     }
 
+    // Log the results for debugging
+    console.log('OTP verification results:', results);
+
     if (results.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
-    res.status(200).json({ success: true, message: 'OTP verified successfully' });
+    // OTP is valid, now allow the user to reset their password
+    res.status(200).json({ success: true, message: 'OTP verified successfully. Proceed to reset password.' });
   });
 });
 

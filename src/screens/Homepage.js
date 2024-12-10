@@ -61,20 +61,23 @@ const Homepage = ({ navigation }) => {
       Alert.alert('Empty Post', 'Please write something to post.');
       return;
     }
-
+  
     if (!userId) {
       Alert.alert('Not Logged In', 'Please log in to post.');
       return;
     }
-
+  
     try {
       const response = await axios.post('http://192.168.1.3:3001/create-post', {
         userId,
         content: postText,
       });
-
+  
       if (response.status === 201) {
-        setPosts((prevPosts) => [response.data.post, ...prevPosts]);
+        setPosts((prevPosts) => [
+          { ...response.data.post, comment_count: 1 }, // Initialize comment count
+          ...prevPosts,
+        ]);
         setPostText(''); // Clear the input field after posting
       } else {
         Alert.alert('Error', 'Something went wrong while posting.');
@@ -84,7 +87,7 @@ const Homepage = ({ navigation }) => {
       Alert.alert('Error', 'There was an issue posting your data.');
     }
   };
-
+  
   const handleLogout = () => {
     Alert.alert('Logged Out', 'You have logged out successfully.');
     AsyncStorage.removeItem('loggedInUser');
@@ -110,14 +113,16 @@ const Homepage = ({ navigation }) => {
             ? `Updated at: ${moment(item.post_updated_at).format('MMMM Do YYYY, h:mm:ss a')}`
             : 'No updates'}
         </Text>
-        <Text style={styles.commentCount}>Comments: {item.comment_count || 0}</Text>
+        <Text style={styles.commentCount}>
+          Comments: {item.comment_count || 0} {/* Ensure comment_count is coming from the backend */}
+        </Text>
         <TouchableOpacity style={styles.replyButton} onPress={() => handleReply(item.post_id, item.post_content)}>
           <Text style={styles.replyButtonText}>Reply</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
-
+  
   return (
     <View style={styles.container}>
       <View style={styles.header}>

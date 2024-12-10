@@ -10,7 +10,7 @@ const port = 3001;
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://192.168.1.140:3001'], // Adjust frontend URL if needed
+  origin: ['http://192.168.1.3:3001'], // Adjust frontend URL if needed
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
 }));
@@ -125,6 +125,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Forgot Password endpoint
 app.post('/forgot-password', (req, res) => {
   const { email } = req.body;
 
@@ -177,6 +178,7 @@ app.post('/forgot-password', (req, res) => {
   });
 });
 
+// Verify OTP for Forgot Password
 app.post('/verify-forgot-password-otp', (req, res) => {
   const { email, otp } = req.body;
 
@@ -199,7 +201,6 @@ app.post('/verify-forgot-password-otp', (req, res) => {
     res.status(200).json({ success: true, message: 'OTP verified successfully' });
   });
 });
-
 
 // OTP verification endpoint
 app.post('/verify-otp', (req, res) => {
@@ -241,6 +242,7 @@ app.post('/verify-otp', (req, res) => {
   });
 });
 
+// Reset password endpoint
 app.post('/reset-password', (req, res) => {
   const { email, newPassword } = req.body;
 
@@ -268,7 +270,6 @@ app.post('/reset-password', (req, res) => {
     res.status(200).json({ success: true, message: 'Password reset successfully' });
   });
 });
-
 
 // Create Post endpoint (No JWT)
 app.post('/create-post', async (req, res) => {
@@ -304,7 +305,7 @@ app.post('/create-post', async (req, res) => {
 // Get all posts endpoint
 app.get('/get-posts', async (req, res) => {
   try {
-    const [posts] = await db.promise().query('SELECT posts.post_id, posts.user_id, posts.post_content, posts.post_created_at, users.email FROM posts INNER JOIN users ON posts.user_id = users.id ORDER BY posts.post_created_at DESC');
+    const [posts] = await db.promise().query('SELECT posts.post_id, posts.user_id, posts.post_content, posts.comment_count, posts.post_created_at, users.email FROM posts INNER JOIN users ON posts.user_id = users.id ORDER BY posts.post_created_at DESC');
     
     res.json({ posts });
   } catch (error) {
@@ -363,7 +364,26 @@ app.get('/get-comments/:postId', async (req, res) => {
   }
 });
 
-// Start the Express server
+// New endpoint to update post content
+app.put('/update-post/:postId', async (req, res) => {
+  const postId = req.params.postId;
+  const { content } = req.body;
+
+  if (!content) {
+    return res.status(400).json({ message: 'Content is required' });
+  }
+
+  const updateQuery = 'UPDATE posts SET post_content = ?, post_updated_at = NOW() WHERE post_id = ?';
+
+  try {
+    await db.promise().query(updateQuery, [content, postId]);
+    res.status(200).json({ message: 'Post updated successfully' });
+  } catch (error) {
+    console.error('Error updating post:', error);
+    res.status(500).json({ message: 'Failed to update post' });
+  }
+});
+
 app.listen(port, () => {
-  console.log(`Server running on http://192.168.1.140:${port}`);
+  console.log(`Server is running on http://192.168.1.3:${port}`);
 });

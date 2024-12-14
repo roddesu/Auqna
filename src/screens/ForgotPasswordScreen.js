@@ -52,7 +52,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
     console.log('Verifying OTP:', otp); // Log the OTP entered by the user
 
     try {
-      const response = await axios.post(`${BASE_URL}/verify-otp`, { email, otp });
+      const response = await axios.post(`${BASE_URL}/verify-forgot-password-otp`, { email, otp });
       console.log('OTP verification response:', response.data); // Log the response from the backend
 
       if (response.data.success) {

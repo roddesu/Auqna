@@ -9,30 +9,40 @@ const ResetPasswordScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleResetPassword = async () => {
-    setLoading(true); // Start loading
-  
-    // Check if the passwords match
+    setLoading(true);
+
+    // Validate input
+    if (!newPassword || !confirmNewPassword || !email || !token) {
+      Alert.alert('Error', 'All fields are required.');
+      setLoading(false);
+      return;
+    }
+
     if (newPassword !== confirmNewPassword) {
       Alert.alert('Password Error', 'Passwords do not match');
-      setLoading(false); // Stop loading
+      setLoading(false);
       return;
     }
-  
-    // Check if the new password meets the length requirement
+
     if (newPassword.length < 6) {
       Alert.alert('Password Error', 'Password must be at least 6 characters long');
-      setLoading(false); // Stop loading
+      setLoading(false);
       return;
     }
-  
+
+    const payload = {
+      email,
+      otp: token, // Assuming 'token' is the OTP you need to send to the backend
+      newPassword,
+      confirmPassword: newPassword, // Backend expects confirmPassword as well
+    };
+
+    // Log the payload before sending it
+    console.log('Sending Payload:', payload);
+
     try {
-      const response = await axios.post('http://192.168.1.3:3003/reset-password', {
-        email,
-        token,
-        newPassword,
-        confirmPassword: confirmNewPassword, // Include both passwords
-      });
-  
+      const response = await axios.post('http://192.168.1.3:3003/reset-password', payload);
+      
       if (response.data.success) {
         Alert.alert('Success', response.data.message);
         navigation.navigate('Login');
@@ -40,18 +50,23 @@ const ResetPasswordScreen = ({ route, navigation }) => {
         Alert.alert('Error', response.data.message || 'An unexpected error occurred.');
       }
     } catch (error) {
-      // Handling errors from the backend
+      console.error('Axios Error:', error); // Log the full error
+      console.error('Response Data:', error.response?.data); // Log backend response
+
       if (error.response) {
-        const errorMessage = error.response.data.message || 'An unexpected error occurred.';
-        Alert.alert('Error', errorMessage);
+        // Server responded with a status code outside the 2xx range
+        Alert.alert('Error', error.response.data.message || 'Invalid request. Please check your input.');
+      } else if (error.request) {
+        // Request was made, but no response received
+        Alert.alert('Error', 'No response from server. Please check your network connection.');
       } else {
+        // Other errors
         Alert.alert('Error', 'Failed to connect to the server. Please try again.');
       }
     } finally {
-      setLoading(false); // Stop loading
+      setLoading(false);
     }
   };
-  
 
   return (
     <View style={styles.container}>

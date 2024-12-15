@@ -235,25 +235,26 @@ app.post('/verify-otp', (req, res) => {
 app.post('/reset-password', (req, res) => {
   const { email, otp, newPassword, confirmPassword } = req.body;
 
-  // Validate required fields
-  if (!newPassword || !confirmPassword) {
-    return res.status(400).json({ success: false, message: 'New password and confirm password are required' });
+  // Log the incoming request body for debugging
+  console.log('Request body:', req.body); // This will help you inspect what the backend is receiving
+
+  // Validate that all required fields are provided
+  if (!email || !otp || !newPassword || !confirmPassword) {
+    return res.status(400).json({ success: false, message: 'All fields are required.' });
   }
 
+  // Validate that the new password and confirm password match
   if (newPassword !== confirmPassword) {
-    return res.status(400).json({ success: false, message: 'Passwords do not match' });
+    return res.status(400).json({ success: false, message: 'Passwords do not match.' });
   }
 
+  // Validate the password length (at least 6 characters)
   if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
   }
 
   // Query to check if the OTP is valid and not expired
-  const query = `
-    SELECT otp, otp_expired_at
-    FROM users
-    WHERE email = ? AND otp = ?;
-  `;
+  const query = `SELECT otp, otp_expired_at FROM users WHERE email = ? AND otp = ?;`;
 
   db.query(query, [email, otp], (err, results) => {
     if (err) {
@@ -262,36 +263,33 @@ app.post('/reset-password', (req, res) => {
     }
 
     if (results.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
     }
 
-    // Check if the OTP has expired
     const otpExpiration = new Date(results[0].otp_expired_at);
 
+    // Check if the OTP has expired
     if (new Date() > otpExpiration) {
-      return res.status(400).json({ success: false, message: 'OTP expired' });
+      return res.status(400).json({ success: false, message: 'OTP expired.' });
     }
 
     // Hash the new password
     const hashedPassword = bcrypt.hashSync(newPassword, 10);
 
     // Update the user's password and reset OTP-related fields
-    const updateQuery = `
-      UPDATE users
-      SET password = ?, otp = NULL, otp_expired_at = NULL, last_password_reset_at = NOW()
-      WHERE email = ?;
-    `;
+    const updateQuery = `UPDATE users SET password = ?, otp = NULL, otp_expired_at = NULL, last_password_reset_at = NOW() WHERE email = ?;`;
 
     db.query(updateQuery, [hashedPassword, email], (err, result) => {
       if (err) {
         console.error('Database Error during password reset:', err);
-        return res.status(500).json({ success: false, message: 'Failed to reset password' });
+        return res.status(500).json({ success: false, message: 'Failed to reset password.' });
       }
 
-      res.status(200).json({ success: true, message: 'Password reset successfully' });
+      res.status(200).json({ success: true, message: 'Password reset successfully.' });
     });
   });
 });
+
 
 // Create Post endpoint (No JWT)
 app.post('/create-post', async (req, res) => {

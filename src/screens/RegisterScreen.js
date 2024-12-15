@@ -26,7 +26,7 @@ const RegisterScreen = ({ navigation }) => {
 
     try {
       console.log('Sending registration request...');
-      const response = await axios.post('http://192.168.1.3:3001/register', { email, password });
+      const response = await axios.post('http://192.168.1.3:3003/register', { email, password });
 
       if (response.data.success) {
         setIsOtpSent(true);
@@ -49,7 +49,7 @@ const RegisterScreen = ({ navigation }) => {
     console.log('Sending OTP for verification:', otp);
 
     try {
-      const response = await axios.post('http://192.168.1.3:3001/verify-otp', { email, otp });
+      const response = await axios.post('http://192.168.1.3:3003/verify-otp', { email, otp });
 
       if (response.data.success) {
         Alert.alert('Registration Complete', 'Your registration is now complete.');

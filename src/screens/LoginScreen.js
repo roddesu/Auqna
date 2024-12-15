@@ -26,7 +26,7 @@ const LoginScreen = ({ navigation }) => {
 
     try {
       // Send the plain password to the server
-      const response = await axios.post('http://192.168.1.3:3001/login', {
+      const response = await axios.post('http://192.168.1.3:3003/login', {
         email,
         password, // Send the plain password for comparison
       });

@@ -36,7 +36,7 @@ const Homepage = ({ navigation }) => {
     
       setLoading(true);
       try {
-        const response = await axios.get('http://192.168.1.3:3001/get-posts');
+        const response = await axios.get('http://192.168.1.3:3003/get-posts');
         
         if (response.data && Array.isArray(response.data.posts) && response.data.posts.length > 0) {
           setPosts(response.data.posts);
@@ -68,7 +68,7 @@ const Homepage = ({ navigation }) => {
     }
   
     try {
-      const response = await axios.post('http://192.168.1.3:3001/create-post', {
+      const response = await axios.post('http://192.168.1.3:3003/create-post', {
         userId,
         content: postText,
       });

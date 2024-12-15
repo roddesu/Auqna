@@ -1,30 +1,57 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 
 const ResetPasswordScreen = ({ route, navigation }) => {
-  const { token } = route.params;
+  const { email, token } = route.params; // Get email and token from route params
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleResetPassword = async () => {
+    setLoading(true); // Start loading
+  
+    // Check if the passwords match
     if (newPassword !== confirmNewPassword) {
       Alert.alert('Password Error', 'Passwords do not match');
+      setLoading(false); // Stop loading
       return;
     }
-
+  
+    // Check if the new password meets the length requirement
+    if (newPassword.length < 6) {
+      Alert.alert('Password Error', 'Password must be at least 6 characters long');
+      setLoading(false); // Stop loading
+      return;
+    }
+  
     try {
-      const response = await axios.post(`http://192.168.1.3:3001/reset/${token}`, { newPassword });
+      const response = await axios.post('http://192.168.1.3:3003/reset-password', {
+        email,
+        token,
+        newPassword,
+        confirmPassword: confirmNewPassword, // Include both passwords
+      });
+  
       if (response.data.success) {
         Alert.alert('Success', response.data.message);
         navigation.navigate('Login');
       } else {
-        Alert.alert('Error', response.data.message);
+        Alert.alert('Error', response.data.message || 'An unexpected error occurred.');
       }
     } catch (error) {
-      Alert.alert('Error', 'An error occurred while resetting password. Please try again.');
+      // Handling errors from the backend
+      if (error.response) {
+        const errorMessage = error.response.data.message || 'An unexpected error occurred.';
+        Alert.alert('Error', errorMessage);
+      } else {
+        Alert.alert('Error', 'Failed to connect to the server. Please try again.');
+      }
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
+  
 
   return (
     <View style={styles.container}>
@@ -52,8 +79,12 @@ const ResetPasswordScreen = ({ route, navigation }) => {
         onChangeText={setConfirmNewPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
-        <Text style={styles.buttonText}>RESET PASSWORD</Text>
+      <TouchableOpacity style={styles.button} onPress={handleResetPassword} disabled={loading}>
+        {loading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>RESET PASSWORD</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>

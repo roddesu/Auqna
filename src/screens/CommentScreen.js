@@ -40,7 +40,7 @@ const CommentScreen = ({ route, navigation }) => {
         setComments(JSON.parse(cachedComments));
       }
   
-      const response = await axios.get(`http://192.168.1.3:3001/get-comments/${postId}`);
+      const response = await axios.get(`http://192.168.1.3:3003/get-comments/${postId}`);
       if (response.status === 200) {
         console.log('Fetched comments:', response.data.comments);
         setComments(response.data.comments);
@@ -78,7 +78,7 @@ const CommentScreen = ({ route, navigation }) => {
     setPosting(true);
   
     try {
-      const response = await axios.post('http://192.168.1.3:3001/create-comment', {
+      const response = await axios.post('http://192.168.1.3:3003/create-comment', {
         postId,
         userId,
         comment: commentText,

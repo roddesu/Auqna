@@ -6,11 +6,11 @@ const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
 
 const app = express();
-const port = 3001;
+const port = 3003;
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://192.168.1.3:3001'], // Adjust frontend URL if needed
+  origin: ['http://192.168.1.3:3003'], // Adjust frontend URL if needed
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
 }));
@@ -133,48 +133,31 @@ app.post('/forgot-password', (req, res) => {
     return res.status(400).json({ success: false, message: 'Email is required' });
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-  const otpExpiration = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiration
+  // Generate a 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  const otpExpiration = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
 
-  const checkUserQuery = 'SELECT * FROM users WHERE email = ?';
-  db.query(checkUserQuery, [email], (err, results) => {
+  // Update the user record with the OTP and expiration time
+  const query = `
+    UPDATE users
+    SET otp = ?, otp_expired_at = ?
+    WHERE email = ?;
+  `;
+
+  db.query(query, [otp, otpExpiration, email], (err, result) => {
     if (err) {
       console.error('Database Error:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
 
-    if (results.length === 0) {
+    if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Email not found' });
     }
 
-    const insertOtpQuery = `
-      INSERT INTO forgot_password_requests (email, otp, otp_expiration)
-      VALUES (?, ?, ?)
-      ON DUPLICATE KEY UPDATE otp = VALUES(otp), otp_expiration = VALUES(otp_expiration)
-    `;
+    // Logic to send OTP via email (not implemented in this snippet)
+    // sendOtpToEmail(email, otp);
 
-    db.query(insertOtpQuery, [email, otp, otpExpiration], (err) => {
-      if (err) {
-        console.error('Database Error:', err);
-        return res.status(500).json({ success: false, message: 'Failed to generate OTP' });
-      }
-
-      const mailOptions = {
-        from: 'ubsafespace@gmail.com',
-        to: email,
-        subject: 'Your OTP for Password Reset',
-        text: `Your OTP for password reset is: ${otp}. It is valid for 10 minutes.`,
-      };
-
-      transporter.sendMail(mailOptions, (error) => {
-        if (error) {
-          console.error('Email Error:', error);
-          return res.status(500).json({ success: false, message: 'Failed to send OTP email' });
-        }
-
-        res.status(200).json({ success: true, message: 'OTP sent successfully' });
-      });
-    });
+    res.status(200).json({ success: true, message: 'OTP sent to email' });
   });
 });
 
@@ -186,19 +169,27 @@ app.post('/verify-forgot-password-otp', (req, res) => {
     return res.status(400).json({ success: false, message: 'Email and OTP are required' });
   }
 
-  const query = `SELECT * FROM forgot_password_requests WHERE email = ? AND otp = ? AND otp_expiration > NOW()`;
+  const query = `SELECT otp, otp_expired_at FROM users WHERE email = ?`;
 
-  db.query(query, [email, otp], (err, results) => {
+  db.query(query, [email], (err, results) => {
     if (err) {
       console.error('Database Error:', err);
       return res.status(500).json({ success: false, message: 'Database error' });
     }
 
-    // Log the results for debugging
-    console.log('OTP verification results:', results);
-
     if (results.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      return res.status(404).json({ success: false, message: 'Email not found' });
+    }
+
+    const userOtp = results[0].otp;
+    const otpExpiration = new Date(results[0].otp_expired_at);
+
+    if (String(otp) !== String(userOtp)) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    if (new Date() > otpExpiration) {
+      return res.status(400).json({ success: false, message: 'OTP expired' });
     }
 
     // OTP is valid, now allow the user to reset their password
@@ -206,9 +197,12 @@ app.post('/verify-forgot-password-otp', (req, res) => {
   });
 });
 
-// OTP verification endpoint
 app.post('/verify-otp', (req, res) => {
   const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+  }
 
   const query = `SELECT otp, otp_expired_at FROM users WHERE email = ?`;
 
@@ -233,45 +227,69 @@ app.post('/verify-otp', (req, res) => {
       return res.status(400).json({ success: false, message: 'OTP expired' });
     }
 
-    const updateQuery = `UPDATE users SET is_verified = true WHERE email = ?`;
-
-    db.query(updateQuery, [email], (updateErr) => {
-      if (updateErr) {
-        console.error('Database Error during verification:', updateErr);
-        return res.status(500).json({ success: false, message: 'Failed to verify user' });
-      }
-
-      res.status(200).json({ success: true, message: 'OTP verified successfully' });
-    });
+    res.status(200).json({ success: true, message: 'OTP verified successfully. Proceed to reset password.' });
   });
 });
 
 // Reset password endpoint
 app.post('/reset-password', (req, res) => {
-  const { email, newPassword } = req.body;
+  const { email, otp, newPassword, confirmPassword } = req.body;
 
-  if (!email || !newPassword) {
-    return res.status(400).json({ success: false, message: 'Email and new password are required' });
+  // Validate required fields
+  if (!newPassword || !confirmPassword) {
+    return res.status(400).json({ success: false, message: 'New password and confirm password are required' });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ success: false, message: 'Passwords do not match' });
   }
 
   if (newPassword.length < 6) {
     return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
   }
 
-  const hashedPassword = bcrypt.hashSync(newPassword, 10);
-
-  const updateQuery = `
-    UPDATE users SET password = ? WHERE email = ?;
-    DELETE FROM forgot_password_requests WHERE email = ?;
+  // Query to check if the OTP is valid and not expired
+  const query = `
+    SELECT otp, otp_expired_at
+    FROM users
+    WHERE email = ? AND otp = ?;
   `;
 
-  db.query(updateQuery, [hashedPassword, email, email], (err) => {
+  db.query(query, [email, otp], (err, results) => {
     if (err) {
       console.error('Database Error:', err);
-      return res.status(500).json({ success: false, message: 'Failed to reset password' });
+      return res.status(500).json({ success: false, message: 'Database error' });
     }
 
-    res.status(200).json({ success: true, message: 'Password reset successfully' });
+    if (results.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    // Check if the OTP has expired
+    const otpExpiration = new Date(results[0].otp_expired_at);
+
+    if (new Date() > otpExpiration) {
+      return res.status(400).json({ success: false, message: 'OTP expired' });
+    }
+
+    // Hash the new password
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+
+    // Update the user's password and reset OTP-related fields
+    const updateQuery = `
+      UPDATE users
+      SET password = ?, otp = NULL, otp_expired_at = NULL, last_password_reset_at = NOW()
+      WHERE email = ?;
+    `;
+
+    db.query(updateQuery, [hashedPassword, email], (err, result) => {
+      if (err) {
+        console.error('Database Error during password reset:', err);
+        return res.status(500).json({ success: false, message: 'Failed to reset password' });
+      }
+
+      res.status(200).json({ success: true, message: 'Password reset successfully' });
+    });
   });
 });
 

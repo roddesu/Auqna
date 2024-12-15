@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 
-const BASE_URL = 'http://192.168.1.3:3001'; // Replace with dynamic configuration for production
+const BASE_URL = 'http://192.168.1.3:3003'; // Replace with dynamic configuration for production
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
